@@ -90,8 +90,9 @@ def gunsub(github_user, github_password,
         r = c.getresponse()
         log.debug('x-ratelimit-remaining: {0}'
                   .format(r.getheader('x-ratelimit-remaining')))
-        result = json.loads(r.read())
-        return result
+        msg = r.read()
+        result = json.loads(msg)
+        return result, msg
 
     since_qs = ''
     if since is not None:
@@ -101,8 +102,8 @@ def gunsub(github_user, github_password,
 
     count = 0
     for page in iterpage():
-        notifications = req('/notifications?all=true&page={0}{1}'
-                            .format(page, since_qs))
+        notifications, msg = req('/notifications?all=true&page={0}{1}'
+                                 .format(page, since_qs))
         if not notifications:
             break
         for notification in notifications:
@@ -119,8 +120,8 @@ def gunsub(github_user, github_password,
                 # resulting log message didn't say what was actually in the
                 # notification, so logging it here for the next time it
                 # happens.
-                log.error('Unexpected notification contents: {}'.format(
-                    notification))
+                log.error('Unexpected notification contents: {} '
+                          '(raw response: {})'.format(notification, msg))
                 raise
             if github_include_repos and \
                not repo_list_match(notification, github_include_repos):
@@ -134,15 +135,15 @@ def gunsub(github_user, github_password,
             # Now check if we explicitly subscribed to this thing.
             subscription_uri = ('/notifications/threads/{0}/subscription'
                                 .format(notification['id']))
-            subscription = req(subscription_uri)
+            subscription, msg = req(subscription_uri)
             # If no subscription is found, then that subscription was implicit
             if 'url' not in subscription:
                 # ... And we therefore unsubscribe from further notifications
                 subject_url = notification['subject']['url']
                 log.info('Unsubscribing from {0}...'.format(subject_url))
                 if not args.dryrun:
-                    result = req(subscription_uri, 'PUT',
-                                 dict(subscribed=False, ignored=True))
+                    result, msg = req(subscription_uri, 'PUT',
+                                      dict(subscribed=False, ignored=True))
                     if 'subscribed' not in result:
                         log.warning('When unsubscribing from {0}, I got this: '
                                     '{1!r} and it does not contain {2!r}.'
