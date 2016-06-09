@@ -9,7 +9,6 @@ import logging
 import os
 from pandas import Timestamp
 import smtplib
-import sys
 from textwrap import wrap, dedent
 import time
 
@@ -52,7 +51,7 @@ def send_email(address, notification):
     msg['Subject'] = u'Unsubscribed from "{}"'.format(title)
     msg['From'] = 'Gunsub <{}>'.format(address)
     msg['To'] = address
-    
+
     smtp = smtplib.SMTP('localhost')
     smtp.sendmail(address, [address], msg.as_string())
     smtp.quit()
@@ -113,7 +112,6 @@ def gunsub(github_user, github_password,
                 # Github web site, so don't mess with them.
                 if notification['subject']['type'] == 'Release':
                     continue
-                repo_name = notification['repository']['name']
             except TypeError:
                 # I once got "TypeError: string indices must be integers" from
                 # the line of code above, which I couldn't debug because the
@@ -162,19 +160,18 @@ def wrap_paragraphs(paragraphs):
 
 
 def parse_args():
-    description=wrap_paragraphs(
+    description = wrap_paragraphs(
         'Unsubscribe automatically from Github threads after '
         'the initial thread notification')
     epilog = wrap_paragraphs(
-        'Repository include and exclude names can optionally starts with '
-                                 '"owner/" or use shell wildcards.\n'
-                                 'To read more about gunsub, check its '
-                                 'project page on Github: '
-                                 'http://github.com/jpetazzo/gunsub.')
+        'Repository include and exclude names can optionally start with '
+        '"owner/" or use shell wildcards.\n'
+        'To read more about gunsub, check its project page on Github: '
+        'http://github.com/jpetazzo/gunsub.')
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=description, epilog=epilog)
-        
+
     parser.add_argument('--debug', action='store_true',
                         help='Enable debug logging')
     parser.add_argument('--dryrun', action='store_true',
