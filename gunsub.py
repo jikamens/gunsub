@@ -9,6 +9,7 @@ import logging
 import os
 from pandas import Timestamp
 import smtplib
+import sys
 from textwrap import wrap, dedent
 import time
 
@@ -23,7 +24,7 @@ def iterpage():
         page += 1
 
 
-def send_email(address, notification):
+def send_email(email_from, email_to, notification):
     notification_type = notification['subject']['type']
     title = notification['subject']['title']
     url = notification['subject']['url'].replace('api.', '', 1).\
@@ -40,20 +41,19 @@ def send_email(address, notification):
         return
 
     body = dedent(u"""
-        You have been unsubscribed from the {2} with the subject
-        "{1}".
+        You have been unsubscribed from the {1} with the subject
+        "{0}".
 
-        Visit {3} to resubscribe.
+        Visit {2} to resubscribe.
        """).lstrip().format(
-           address, title, notification_type.lower(), url)
+           title, notification_type.lower(), url)
 
     msg = email.mime.text.MIMEText(body, 'plain', 'utf-8')
     msg['Subject'] = u'Unsubscribed from "{}"'.format(title)
-    msg['From'] = 'Gunsub <{}>'.format(address)
-    msg['To'] = address
+    msg['To'] = email_to
 
     smtp = smtplib.SMTP('localhost')
-    smtp.sendmail(address, [address], msg.as_string())
+    smtp.sendmail(email_from, [email_to], msg.as_string())
     smtp.quit()
 
 
@@ -69,7 +69,8 @@ def repo_list_match(notification, patterns):
 
 def gunsub(github_user, github_password,
            github_include_repos=[], github_exclude_repos=[],
-           since=None, dryrun=False, email=None):
+           since=None, dryrun=False, email_from=None,
+           email_to=None):
 
     def req(uri, method='GET', body=None, headers={}):
         auth = base64.encodestring('{0}:{1}'
@@ -146,8 +147,8 @@ def gunsub(github_user, github_password,
                         log.warning('When unsubscribing from {0}, I got this: '
                                     '{1!r} and it does not contain {2!r}.'
                                     .format(subject_url, result, 'subscribed'))
-                if email:
-                    send_email(email, notification)
+                if email_from:
+                    send_email(email_from, email_to, notification)
                 count += 1
     log.info('Done; had to go through {0} page(s) of notifications, '
              'and unsubscribed from {1} thread(s).'
@@ -199,10 +200,17 @@ def parse_args():
     parser.add_argument('--since', metavar='TIME-STRING', action='store',
                         type=Timestamp, help='Examine notifications starting '
                         'at the specified time')
-    parser.add_argument('--email', metavar='ADDRESS', action='store',
+    parser.add_argument('--email-from', metavar='ADDRESS', action='store',
+                        help='Email address from which to send notifications')
+    parser.add_argument('--email-to', metavar='ADDRESS', action='store',
                         help='Email address to notify about unsubscribes')
 
-    return parser.parse_args()
+    args = parser.parse_args()
+
+    if int(not not args.email_from) + int(not not args.email_to) == 1:
+        sys.exit('Must specify both --email-from and --email-to')
+
+    return args
 
 
 def main(args):
@@ -234,7 +242,8 @@ def main(args):
         try:
             gunsub(github_user, github_password,
                    github_include_repos, github_exclude_repos,
-                   since, dryrun=args.dryrun, email=args.email)
+                   since, dryrun=args.dryrun, email_from=args.email_from,
+                   email_to=args.email_to)
             if not args.dryrun:
                 with open(state_file, 'w') as next_since_file:
                     next_since_file.write(str(next_since))
