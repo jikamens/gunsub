@@ -8,6 +8,7 @@ import json
 import logging
 import os
 from pandas import Timestamp
+import re
 import smtplib
 import sys
 from textwrap import wrap, dedent
@@ -69,6 +70,7 @@ def repo_list_match(notification, patterns):
 
 def gunsub(github_user, github_password,
            github_include_repos=[], github_exclude_repos=[],
+           exclude_labels=[],
            since=None, dryrun=False, email_from=None,
            email_to=None):
 
@@ -131,6 +133,21 @@ def gunsub(github_user, github_password,
             # don't touch the subscription information.
             if notification['reason'] != 'subscribed':
                 continue
+
+            # Check for excluded labels
+            if exclude_labels:
+                labels_uri = '{}/labels'.format(notification['subject']['url'])
+                if notification['subject']['type'] == 'PullRequest':
+                    labels_uri = re.sub(r'pulls(/\d+/labels)', r'issues\1',
+                                        labels_uri)
+                elif notification['subject']['type'] == 'Commit':
+                    continue
+                labels, labels_msg = req(labels_uri)
+                if not isinstance(labels, list):
+                    import pdb; pdb.set_trace()
+                if any(l['name'] in exclude_labels for l in labels):
+                    continue
+
             # Now check if we explicitly subscribed to this thing.
             subscription_uri = ('/notifications/threads/{0}/subscription'
                                 .format(notification['id']))
@@ -204,6 +221,9 @@ def parse_args():
                         help='Email address from which to send notifications')
     parser.add_argument('--email-to', metavar='ADDRESS', action='store',
                         help='Email address to notify about unsubscribes')
+    parser.add_argument('--exclude-label', metavar='label', action='append',
+                        help='Do not unsubscribe issues with the specified '
+                        'label', default=[])
 
     args = parser.parse_args()
 
@@ -242,6 +262,7 @@ def main(args):
         try:
             gunsub(github_user, github_password,
                    github_include_repos, github_exclude_repos,
+                   args.exclude_label,
                    since, dryrun=args.dryrun, email_from=args.email_from,
                    email_to=args.email_to)
             if not args.dryrun:

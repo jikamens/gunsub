@@ -42,6 +42,10 @@ Thank you! Gunsub only uses the basic Python library, so you don't need
 to install anything fancy. You only need to set two environment variables,
 `GITHUB_USER` and `GITHUB_PASSWORD`, and run it with `python gunsub.py`.
 
+If you use a personal access token instead of your Github account
+password, then the token needs to have "notifications" access, and
+also "repo" access if you use the "--exclude-label" option.
+
 Optionally, you may set `GITHUB_INCLUDE_REPOS` or `GITHUB_EXCLUDE_REPOS`
 to a comma-separated list of repositories to include or exclude. If you
 do not specify anything, by default, Gunsub will act upon all your
