@@ -177,6 +177,13 @@ def wrap_paragraphs(paragraphs):
                        for paragraph in paragraphs.split('\n'))
 
 
+def env_list(varname):
+    val = os.environ.get(varname, '')
+    if not val:
+        return []
+    return val.split(',')
+
+
 def parse_args():
     description = wrap_paragraphs(
         'Unsubscribe automatically from Github threads after '
@@ -206,11 +213,11 @@ def parse_args():
                         default=int(os.environ.get('GITHUB_POLL_INTERVAL', 0)),
                         help='Poll interval in seconds for continuous '
                         'operation (or set $GITHUB_POLL_INTERVAL)')
-    include_default = os.environ.get('GITHUB_INCLUDE_REPOS', '').split(',')
+    include_default = env_list('GITHUB_INCLUDE_REPOS')
     parser.add_argument('--include', action='append', default=include_default,
                         help='List of repositories to include (or set '
                         '$GITHUB_INCLUDE_REPOS to comma-separated list)')
-    exclude_default = os.environ.get('GITHUB_EXCLUDE_REPOS', '').split(',')
+    exclude_default = env_list('GITHUB_EXCLUDE_REPOS')
     parser.add_argument('--exclude', action='append', default=exclude_default,
                         help='List of repositories to exclude (or set '
                         '$GITHUB_EXCLUDE_REPOS to comma-separated list)')
