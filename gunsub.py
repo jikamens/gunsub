@@ -143,8 +143,6 @@ def gunsub(github_user, github_password,
                 elif notification['subject']['type'] == 'Commit':
                     continue
                 labels, labels_msg = req(labels_uri)
-                if not isinstance(labels, list):
-                    import pdb; pdb.set_trace()
                 if any(l['name'] in exclude_labels for l in labels):
                     continue
 
